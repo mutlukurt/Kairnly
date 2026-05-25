@@ -714,6 +714,19 @@ User-facing:
 - Fullscreen mode now uses the full available vertical space.
 - The sidebar and note editor extend to the bottom of the macOS fullscreen window.
 
+### v1.0.15 - Clean macOS App Icon
+
+Technical:
+
+- Rebuilt the public app logo, favicon, apple touch icon, Tauri PNG icons, and macOS ICNS icon from the Kairnly mark only.
+- Removed the internal wordmark from the desktop app icon so Launchpad, Dock, and DMG display a clean square icon.
+- Refreshed the downloadable macOS DMG artifact with the updated icon set.
+
+User-facing:
+
+- Kairnly now appears like a normal polished macOS app icon.
+- The icon no longer shows extra text inside the artwork.
+
 ## Installation
 
 Install dependencies:
