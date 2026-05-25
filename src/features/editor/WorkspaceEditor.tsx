@@ -125,6 +125,7 @@ export function WorkspaceEditor() {
   const saveTimer = useRef<number | null>(null)
   const titleTimer = useRef<number | null>(null)
   const blockControlsHideTimer = useRef<number | null>(null)
+  const loadedPageId = useRef<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const extensions = useMemo(
@@ -188,9 +189,11 @@ export function WorkspaceEditor() {
   })
 
   useEffect(() => {
-    if (!editor || !activeDoc) return
+    if (!editor || !activeDoc || !activePage?.id) return
+    if (loadedPageId.current === activePage.id) return
     editor.commands.setContent(activeDoc)
-  }, [activeDoc, editor])
+    loadedPageId.current = activePage.id
+  }, [activeDoc, activePage?.id, editor])
 
   const saveTitle = useCallback(
     (nextTitle: string) => {

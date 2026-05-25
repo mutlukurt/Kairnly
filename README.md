@@ -766,6 +766,7 @@ Technical:
 - Recomputed the slash command deletion range at execution time from the current paragraph text, preventing leftover command characters inside inserted list items.
 - Switched list creation to Tiptap’s own `toggleTaskList`, `toggleBulletList`, and `toggleOrderedList` commands.
 - Made bulleted and numbered list markers explicit and theme-visible.
+- Stopped autosave/store updates from reloading editor content while the user is typing, preserving the active cursor position inside lists.
 
 User-facing:
 
