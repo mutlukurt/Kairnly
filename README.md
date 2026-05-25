@@ -700,6 +700,20 @@ User-facing:
 - Developers can run one command to produce a fresh DMG and copy it to Desktop.
 - The generated installer uses the Kairnly name, Kairnly icon, and proper macOS productivity app metadata.
 
+### v1.0.14 - macOS Fullscreen Layout Fix
+
+Technical:
+
+- Replaced the main app shell’s viewport sizing with a `100dvh`-based layout.
+- Ensured `html`, `body`, `#root`, and the app shell fill the real macOS fullscreen webview height.
+- Preserved the existing sidebar/editor layout while preventing the app from leaving unused space at the bottom of fullscreen windows.
+- Rebuilt the macOS DMG and refreshed the downloadable artifact.
+
+User-facing:
+
+- Fullscreen mode now uses the full available vertical space.
+- The sidebar and note editor extend to the bottom of the macOS fullscreen window.
+
 ## Installation
 
 Install dependencies:

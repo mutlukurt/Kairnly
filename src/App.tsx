@@ -14,7 +14,7 @@ export default function App() {
   }, [initialize])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--background)] text-[var(--text)]">
+    <div className="app-shell flex overflow-hidden bg-[var(--background)] text-[var(--text)]">
       <Sidebar />
       <section className="flex min-w-0 flex-1 flex-col">
         <EditorHeader />
