@@ -2,6 +2,12 @@
 
 Kairnly is a private, local-first desktop workspace for personal notes, pages, documents, tasks, ideas, structured writing, and local knowledge management.
 
+[![Download macOS DMG](https://img.shields.io/badge/Download%20macOS%20DMG-Kairnly%201.0.0-8B6F47?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/mutlukurt/Kairnly/raw/main/releases/Kairnly_1.0.0_aarch64.dmg)
+
+**Download for macOS:** [Kairnly_1.0.0_aarch64.dmg](https://github.com/mutlukurt/Kairnly/raw/main/releases/Kairnly_1.0.0_aarch64.dmg)
+
+> This local build is unsigned by default. macOS may show a security warning on first launch. For public distribution, Apple Developer ID signing and notarization are recommended.
+
 It is designed for people who want a calm writing-first workspace without accounts, cloud sync, subscriptions, team features, or remote databases. Notes live locally on the user’s own device.
 
 Repository: https://github.com/mutlukurt/Kairnly
