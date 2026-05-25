@@ -731,8 +731,8 @@ User-facing:
 
 Technical:
 
-- Fixed the editor command focus flow after inserting todo blocks.
-- Added a safer post-insert focus resolver that finds the first editable text node inside the inserted todo item.
+- Fixed the editor command flow after inserting todo blocks.
+- Replaced delayed post-insert focus guessing with a direct ProseMirror transaction that creates the todo item and places the selection inside its editable paragraph.
 - Applied the fix to both slash-command insertion and plus-button insertion because both use the same shared command registry.
 
 User-facing:

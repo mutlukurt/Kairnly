@@ -1,4 +1,5 @@
 import type { JSONContent } from '@tiptap/core'
+import { TextSelection } from '@tiptap/pm/state'
 import type { Editor } from '@tiptap/react'
 import {
   Bookmark,
@@ -69,11 +70,6 @@ const codeBlock = (): JSONContent => ({
   attrs: { language: null },
 })
 
-const taskList = (): JSONContent => ({
-  type: 'taskList',
-  content: [{ type: 'taskItem', attrs: { checked: false }, content: [paragraph()] }],
-})
-
 const bulletList = (): JSONContent => ({
   type: 'bulletList',
   content: [{ type: 'listItem', content: [paragraph()] }],
@@ -109,26 +105,6 @@ function focusInsertedContent(editor: Editor, position: number) {
   })
 }
 
-function focusFirstInsertedTextNode(editor: Editor, insertStart: number) {
-  window.requestAnimationFrame(() => {
-    if (editor.isDestroyed) return
-    let textPosition: number | null = null
-    const searchTo = Math.min(editor.state.doc.content.size, insertStart + 80)
-
-    editor.state.doc.nodesBetween(insertStart, searchTo, (node, position) => {
-      if (textPosition !== null) return false
-      if (['paragraph', 'heading', 'codeBlock'].includes(node.type.name)) {
-        textPosition = position + 1
-        return false
-      }
-      return true
-    })
-
-    if (textPosition !== null) focusInsertedContent(editor, textPosition)
-    else editor.chain().focus().run()
-  })
-}
-
 function insertContent(editor: Editor, context: InsertContext, content: JSONContent | JSONContent[], focusOffset: number | null = 1) {
   const insertStart = getInsertStart(context)
   if (context.source === 'slash') {
@@ -140,9 +116,38 @@ function insertContent(editor: Editor, context: InsertContext, content: JSONCont
 }
 
 function insertTaskList(editor: Editor, context: InsertContext) {
-  const insertStart = getInsertStart(context)
-  insertContent(editor, context, taskList(), null)
-  focusFirstInsertedTextNode(editor, insertStart)
+  editor.chain().focus().command(({ state, dispatch }) => {
+    const taskListType = state.schema.nodes.taskList
+    const taskItemType = state.schema.nodes.taskItem
+    const paragraphType = state.schema.nodes.paragraph
+    if (!taskListType || !taskItemType || !paragraphType) return false
+
+    const taskNode = taskListType.create(null, taskItemType.create({ checked: false }, paragraphType.create()))
+    const tr = state.tr
+    let from = context.source === 'slash' ? context.range.from : context.insertAt
+    let to = context.source === 'slash' ? context.range.to : context.insertAt
+
+    if (context.source === 'slash') {
+      const $from = state.doc.resolve(context.range.from)
+      const parent = $from.parent
+      const parentText = parent.textBetween(0, parent.content.size, '', '')
+      if (parent.isTextblock && /^\/[^\s/]*$/.test(parentText) && $from.depth > 0) {
+        from = $from.before($from.depth)
+        to = $from.after($from.depth)
+      }
+    }
+
+    tr.replaceWith(from, to, taskNode)
+    tr.setSelection(TextSelection.create(tr.doc, from + 3))
+    tr.scrollIntoView()
+    dispatch?.(tr)
+
+    window.requestAnimationFrame(() => {
+      if (!editor.isDestroyed) editor.view.focus()
+    })
+
+    return true
+  }).run()
 }
 
 function insertTextPrompt(editor: Editor, context: InsertContext, label: string, promptText: string) {
