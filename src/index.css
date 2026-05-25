@@ -1,0 +1,327 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;450;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color-scheme: light;
+  --background: #f8f5ef;
+  --background-translucent: rgba(248, 245, 239, 0.78);
+  --sidebar: #f0ebe2;
+  --surface: #ffffff;
+  --surface-muted: #eee7da;
+  --surface-hover: #e8dfd0;
+  --text: #1f1f1c;
+  --text-muted: #6f6a60;
+  --text-faint: #9a9285;
+  --border: #e2dace;
+  --border-subtle: rgba(226, 218, 206, 0.7);
+  --accent: #8b6f47;
+  --accent-strong: #735a37;
+  --accent-soft: #d8c6a5;
+  --success: #6e8b68;
+  --danger: #b45a4d;
+  --danger-soft: rgba(180, 90, 77, 0.12);
+  --editor-font-size: 17px;
+  --editor-line-height: 1.78;
+  --editor-max-width: 860px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #1e1d1a;
+  --background-translucent: rgba(30, 29, 26, 0.78);
+  --sidebar: #24221f;
+  --surface: #2c2924;
+  --surface-muted: #363129;
+  --surface-hover: #423b31;
+  --text: #f4efe6;
+  --text-muted: #b8ada0;
+  --text-faint: #82786d;
+  --border: #443d34;
+  --border-subtle: rgba(68, 61, 52, 0.65);
+  --accent: #b89563;
+  --accent-strong: #c6a571;
+  --accent-soft: rgba(184, 149, 99, 0.24);
+  --success: #8dad82;
+  --danger: #d17265;
+  --danger-soft: rgba(209, 114, 101, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  overflow: hidden;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-faint) 38%, transparent);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+.kairnly-editor {
+  min-height: 48vh;
+  color: var(--text);
+  font-size: var(--editor-font-size);
+  line-height: var(--editor-line-height);
+}
+
+:root[data-show-word-count='false'] .editor-word-count {
+  display: none;
+}
+
+:root[data-focus-mode='true'] .editor-word-count,
+:root[data-focus-mode='true'] .editor-word-count + span {
+  display: none;
+}
+
+.kairnly-editor p.is-editor-empty:first-child::before {
+  color: var(--text-faint);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.kairnly-editor h1,
+.kairnly-editor h2,
+.kairnly-editor h3 {
+  color: var(--text);
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.kairnly-editor h1 {
+  margin: 1.6em 0 0.5em;
+  font-size: 2.15rem;
+}
+
+.kairnly-editor h2 {
+  margin: 1.45em 0 0.45em;
+  font-size: 1.55rem;
+}
+
+.kairnly-editor h3 {
+  margin: 1.25em 0 0.35em;
+  font-size: 1.15rem;
+}
+
+.kairnly-editor p {
+  margin: 0.7em 0;
+}
+
+.kairnly-editor ul,
+.kairnly-editor ol {
+  padding-left: 1.5rem;
+}
+
+.kairnly-editor li {
+  margin: 0.25rem 0;
+}
+
+.kairnly-editor blockquote {
+  margin: 1rem 0;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+  background: var(--surface-muted);
+  padding: 0.75rem 1rem;
+  color: var(--text);
+}
+
+.kairnly-editor blockquote p:first-child {
+  margin-top: 0;
+}
+
+.kairnly-editor blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.kairnly-editor img {
+  display: block;
+  max-width: 100%;
+  max-height: 520px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 38px rgba(31, 31, 28, 0.08);
+}
+
+.kairnly-media-block {
+  margin: 1rem 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 12px 38px rgba(31, 31, 28, 0.06);
+}
+
+.kairnly-media-video {
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  background: #111;
+}
+
+.kairnly-media-block figcaption {
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.kairnly-media-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+}
+
+.kairnly-media-card strong,
+.kairnly-media-card a {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.kairnly-media-kicker,
+.kairnly-media-url {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kairnly-editor pre {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+  padding: 1rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.kairnly-editor code {
+  border-radius: 5px;
+  background: var(--surface-muted);
+  padding: 0.13rem 0.35rem;
+  font-size: 0.9em;
+}
+
+.kairnly-editor pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.kairnly-editor hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.kairnly-editor a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.kairnly-editor mark {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+  color: inherit;
+  padding: 0.05rem 0.15rem;
+}
+
+.kairnly-editor ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.75rem 0;
+}
+
+.kairnly-editor ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0.35rem 0;
+}
+
+.kairnly-editor ul[data-type='taskList'] label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.78em;
+  padding-top: 0;
+  user-select: none;
+}
+
+.kairnly-editor ul[data-type='taskList'] li > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.kairnly-editor ul[data-type='taskList'] li > div > p {
+  margin: 0;
+}
+
+.kairnly-editor ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--text-faint) 70%, transparent);
+}
+
+.kairnly-editor input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--success);
+  cursor: pointer;
+}
+
+.kairnly-editor table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 12px;
+  margin: 1.2rem 0;
+}
+
+.kairnly-editor th,
+.kairnly-editor td {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.7rem;
+  vertical-align: top;
+}
+
+.kairnly-editor th {
+  background: var(--surface-muted);
+  font-weight: 600;
+}
