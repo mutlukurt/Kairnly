@@ -741,6 +741,23 @@ User-facing:
 - Text starts beside the checkbox immediately.
 - A new line is only created when the user presses Enter.
 
+### v1.0.17 - Reliable List Editing Behavior
+
+Technical:
+
+- Moved todo, bulleted list, and numbered list insertion to the same direct ProseMirror list transaction path.
+- Added a dedicated editor keyboard extension for list Enter behavior.
+- Pressing Enter on a filled todo/list item now creates the next item.
+- Pressing Enter on an empty todo/list item now exits the list and returns to a normal paragraph.
+- List markers and checkbox styling now use Kairnly theme variables in light and dark mode.
+
+User-facing:
+
+- Todo, bullet, and numbered lists behave like real editable lists.
+- Todo text stays beside the checkbox.
+- A single Enter creates the next checkbox/list item.
+- A second Enter on an empty item returns to normal writing.
+
 ## Installation
 
 Install dependencies:

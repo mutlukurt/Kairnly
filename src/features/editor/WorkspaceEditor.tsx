@@ -1,4 +1,5 @@
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import { Extension, type JSONContent } from '@tiptap/core'
 import Color from '@tiptap/extension-color'
 import Highlight from '@tiptap/extension-highlight'
 import ImageExtension from '@tiptap/extension-image'
@@ -27,7 +28,6 @@ import type { TiptapDoc } from '../../types'
 import { BlockInsertMenu } from './BlockInsertMenu'
 import { MediaBlock } from './MediaBlock'
 import type { InsertContext } from './editorCommands'
-import type { JSONContent } from '@tiptap/core'
 
 const emojiChoices = ['🪨', '✦', '✎', '◒', '◆', '☘', '◎', '□']
 const textColors = [
@@ -56,6 +56,39 @@ const backgroundColors = [
 ] as const
 
 const blockControlsOffset = 126
+
+function isInsideNode(editor: { state: { selection: { $from: { depth: number; node: (depth: number) => { type: { name: string }; textContent: string } } } } }, nodeName: string) {
+  const { $from } = editor.state.selection
+  for (let depth = $from.depth; depth > 0; depth -= 1) {
+    const node = $from.node(depth)
+    if (node.type.name === nodeName) return node
+  }
+  return null
+}
+
+const KairnlyListKeys = Extension.create({
+  name: 'kairnlyListKeys',
+  priority: 1000,
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => {
+        const taskItem = isInsideNode(this.editor, 'taskItem')
+        if (taskItem) {
+          if (taskItem.textContent.trim().length === 0) return this.editor.commands.liftListItem('taskItem')
+          return this.editor.commands.splitListItem('taskItem')
+        }
+
+        const listItem = isInsideNode(this.editor, 'listItem')
+        if (listItem) {
+          if (listItem.textContent.trim().length === 0) return this.editor.commands.liftListItem('listItem')
+          return this.editor.commands.splitListItem('listItem')
+        }
+
+        return false
+      },
+    }
+  },
+})
 
 function downloadFile(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type })
@@ -104,6 +137,7 @@ export function WorkspaceEditor() {
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      KairnlyListKeys,
       Underline,
       TextStyle,
       Color,

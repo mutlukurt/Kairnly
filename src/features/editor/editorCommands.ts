@@ -70,16 +70,6 @@ const codeBlock = (): JSONContent => ({
   attrs: { language: null },
 })
 
-const bulletList = (): JSONContent => ({
-  type: 'bulletList',
-  content: [{ type: 'listItem', content: [paragraph()] }],
-})
-
-const orderedList = (): JSONContent => ({
-  type: 'orderedList',
-  content: [{ type: 'listItem', content: [paragraph()] }],
-})
-
 const table = (): JSONContent => ({
   type: 'table',
   content: Array.from({ length: 3 }, (_, row) => ({
@@ -115,29 +105,38 @@ function insertContent(editor: Editor, context: InsertContext, content: JSONCont
   if (focusOffset !== null) focusInsertedContent(editor, focusPos(insertStart, focusOffset))
 }
 
-function insertTaskList(editor: Editor, context: InsertContext) {
+function replaceSlashParagraphRange(editor: Editor, context: InsertContext) {
+  if (context.source !== 'slash') return context
+
+  const $from = editor.state.doc.resolve(context.range.from)
+  const parent = $from.parent
+  const parentText = parent.textBetween(0, parent.content.size, '', '')
+  if (!parent.isTextblock || !/^\/[^\s/]*$/.test(parentText) || $from.depth === 0) return context
+
+  return {
+    ...context,
+    range: {
+      from: $from.before($from.depth),
+      to: $from.after($from.depth),
+    },
+  }
+}
+
+function insertList(editor: Editor, context: InsertContext, listName: 'bulletList' | 'orderedList' | 'taskList') {
   editor.chain().focus().command(({ state, dispatch }) => {
-    const taskListType = state.schema.nodes.taskList
-    const taskItemType = state.schema.nodes.taskItem
+    const listType = state.schema.nodes[listName]
+    const itemType = state.schema.nodes[listName === 'taskList' ? 'taskItem' : 'listItem']
     const paragraphType = state.schema.nodes.paragraph
-    if (!taskListType || !taskItemType || !paragraphType) return false
+    if (!listType || !itemType || !paragraphType) return false
 
-    const taskNode = taskListType.create(null, taskItemType.create({ checked: false }, paragraphType.create()))
+    const attrs = listName === 'taskList' ? { checked: false } : null
+    const listNode = listType.create(null, itemType.create(attrs, paragraphType.create()))
     const tr = state.tr
-    let from = context.source === 'slash' ? context.range.from : context.insertAt
-    let to = context.source === 'slash' ? context.range.to : context.insertAt
+    const normalized = replaceSlashParagraphRange(editor, context)
+    const from = normalized.source === 'slash' ? normalized.range.from : normalized.insertAt
+    const to = normalized.source === 'slash' ? normalized.range.to : normalized.insertAt
 
-    if (context.source === 'slash') {
-      const $from = state.doc.resolve(context.range.from)
-      const parent = $from.parent
-      const parentText = parent.textBetween(0, parent.content.size, '', '')
-      if (parent.isTextblock && /^\/[^\s/]*$/.test(parentText) && $from.depth > 0) {
-        from = $from.before($from.depth)
-        to = $from.after($from.depth)
-      }
-    }
-
-    tr.replaceWith(from, to, taskNode)
+    tr.replaceWith(from, to, listNode)
     tr.setSelection(TextSelection.create(tr.doc, from + 3))
     tr.scrollIntoView()
     dispatch?.(tr)
@@ -203,7 +202,7 @@ export const editorCommands: EditorCommand[] = [
     aliases: ['checkbox', 'task'],
     icon: ListChecks,
     suggested: true,
-    action: (editor, context) => insertTaskList(editor, context),
+    action: (editor, context) => insertList(editor, context, 'taskList'),
   },
   {
     id: 'heading1',
@@ -295,7 +294,7 @@ export const editorCommands: EditorCommand[] = [
     category: 'Basic blocks',
     aliases: ['ul', 'list'],
     icon: List,
-    action: (editor, context) => insertContent(editor, context, bulletList(), 3),
+    action: (editor, context) => insertList(editor, context, 'bulletList'),
   },
   {
     id: 'numbered',
@@ -304,7 +303,7 @@ export const editorCommands: EditorCommand[] = [
     category: 'Basic blocks',
     aliases: ['ol', 'steps'],
     icon: ListOrdered,
-    action: (editor, context) => insertContent(editor, context, orderedList(), 3),
+    action: (editor, context) => insertList(editor, context, 'orderedList'),
   },
   {
     id: 'toggle',

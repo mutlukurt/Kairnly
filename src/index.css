@@ -165,6 +165,14 @@ textarea {
   margin: 0.25rem 0;
 }
 
+.kairnly-editor li::marker {
+  color: var(--text-muted);
+}
+
+.kairnly-editor li > p {
+  margin: 0.25rem 0;
+}
+
 .kairnly-editor blockquote {
   margin: 1rem 0;
   border-left: 3px solid var(--accent);
@@ -316,11 +324,49 @@ textarea {
 }
 
 .kairnly-editor input[type='checkbox'] {
+  appearance: none;
+  display: grid;
+  place-content: center;
   width: 1rem;
   height: 1rem;
   margin: 0;
-  accent-color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--text-faint) 72%, transparent);
+  border-radius: 0.32rem;
+  background: var(--surface);
+  box-shadow: inset 0 1px 1px rgba(31, 31, 28, 0.06);
   cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.kairnly-editor input[type='checkbox']::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  clip-path: polygon(14% 44%, 0 60%, 40% 100%, 100% 18%, 84% 4%, 38% 68%);
+  background: #fff;
+  content: '';
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.kairnly-editor input[type='checkbox']:checked {
+  border-color: var(--success);
+  background: var(--success);
+}
+
+.kairnly-editor input[type='checkbox']:checked::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.kairnly-editor input[type='checkbox']:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--success) 48%, transparent);
+  outline-offset: 2px;
 }
 
 .kairnly-editor table {
