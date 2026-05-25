@@ -727,6 +727,20 @@ User-facing:
 - Kairnly now appears like a normal polished macOS app icon.
 - The icon no longer shows extra text inside the artwork.
 
+### v1.0.16 - Todo Insert Focus Fix
+
+Technical:
+
+- Fixed the editor command focus flow after inserting todo blocks.
+- Added a safer post-insert focus resolver that finds the first editable text node inside the inserted todo item.
+- Applied the fix to both slash-command insertion and plus-button insertion because both use the same shared command registry.
+
+User-facing:
+
+- New todo items no longer push typing into a separate line by themselves.
+- Text starts beside the checkbox immediately.
+- A new line is only created when the user presses Enter.
+
 ## Installation
 
 Install dependencies:

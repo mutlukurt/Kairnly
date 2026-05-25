@@ -96,13 +96,53 @@ const table = (): JSONContent => ({
 })
 
 const focusPos = (insertAt: number, offset = 1) => insertAt + offset
+const getInsertStart = (context: InsertContext) => (context.source === 'slash' ? context.range.from : context.insertAt)
 
-function insertContent(editor: Editor, context: InsertContext, content: JSONContent | JSONContent[], focusOffset = 1) {
+function focusInsertedContent(editor: Editor, position: number) {
+  window.requestAnimationFrame(() => {
+    if (editor.isDestroyed) return
+    try {
+      editor.chain().focus().setTextSelection(position).run()
+    } catch {
+      editor.chain().focus().run()
+    }
+  })
+}
+
+function focusFirstInsertedTextNode(editor: Editor, insertStart: number) {
+  window.requestAnimationFrame(() => {
+    if (editor.isDestroyed) return
+    let textPosition: number | null = null
+    const searchTo = Math.min(editor.state.doc.content.size, insertStart + 80)
+
+    editor.state.doc.nodesBetween(insertStart, searchTo, (node, position) => {
+      if (textPosition !== null) return false
+      if (['paragraph', 'heading', 'codeBlock'].includes(node.type.name)) {
+        textPosition = position + 1
+        return false
+      }
+      return true
+    })
+
+    if (textPosition !== null) focusInsertedContent(editor, textPosition)
+    else editor.chain().focus().run()
+  })
+}
+
+function insertContent(editor: Editor, context: InsertContext, content: JSONContent | JSONContent[], focusOffset: number | null = 1) {
+  const insertStart = getInsertStart(context)
   if (context.source === 'slash') {
     editor.chain().focus().deleteRange(context.range).insertContent(content).run()
-    return
+  } else {
+    editor.chain().focus().insertContentAt(context.insertAt, content).run()
   }
-  editor.chain().focus().insertContentAt(context.insertAt, content).setTextSelection(focusPos(context.insertAt, focusOffset)).run()
+  if (focusOffset !== null) focusInsertedContent(editor, focusPos(insertStart, focusOffset))
+}
+
+function insertTaskList(editor: Editor, context: InsertContext) {
+  const insertStart = getInsertStart(context)
+  insertContent(editor, context, taskList(), null)
+  focusFirstInsertedTextNode(editor, insertStart)
 }
 
 function insertTextPrompt(editor: Editor, context: InsertContext, label: string, promptText: string) {
@@ -158,7 +198,7 @@ export const editorCommands: EditorCommand[] = [
     aliases: ['checkbox', 'task'],
     icon: ListChecks,
     suggested: true,
-    action: (editor, context) => insertContent(editor, context, taskList(), 3),
+    action: (editor, context) => insertTaskList(editor, context),
   },
   {
     id: 'heading1',
