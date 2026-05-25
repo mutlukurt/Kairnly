@@ -758,6 +758,22 @@ User-facing:
 - A single Enter creates the next checkbox/list item.
 - A second Enter on an empty item returns to normal writing.
 
+### v1.0.18 - Slash Menu Focus and List Visibility Fix
+
+Technical:
+
+- Stopped the slash-command menu from stealing editor focus while the user is typing a slash command.
+- Recomputed the slash command deletion range at execution time from the current paragraph text, preventing leftover command characters inside inserted list items.
+- Switched list creation to Tiptap’s own `toggleTaskList`, `toggleBulletList`, and `toggleOrderedList` commands.
+- Made bulleted and numbered list markers explicit and theme-visible.
+
+User-facing:
+
+- Typing `/todo`, selecting Todo, and writing now keeps text directly beside the checkbox.
+- Pressing Enter once creates the next checkbox.
+- Pressing Enter again on an empty checkbox returns to normal paragraph writing.
+- Bulleted list markers are visible in both light and dark themes.
+
 ## Installation
 
 Install dependencies:

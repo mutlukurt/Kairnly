@@ -161,12 +161,22 @@ textarea {
   padding-left: 1.5rem;
 }
 
+.kairnly-editor ul:not([data-type='taskList']) {
+  list-style-type: disc;
+}
+
+.kairnly-editor ol {
+  list-style-type: decimal;
+}
+
 .kairnly-editor li {
+  color: var(--text);
   margin: 0.25rem 0;
 }
 
 .kairnly-editor li::marker {
-  color: var(--text-muted);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .kairnly-editor li > p {

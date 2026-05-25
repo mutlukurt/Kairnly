@@ -31,8 +31,8 @@ export function BlockInsertMenu({ editor, open, query, position, context, helper
 
   useEffect(() => {
     if (!open) return
-    window.setTimeout(() => searchRef.current?.focus(), 0)
-  }, [open])
+    if (context?.source === 'plus') window.setTimeout(() => searchRef.current?.focus(), 0)
+  }, [context?.source, open])
 
   useEffect(() => {
     if (!open || !editor || !context) return

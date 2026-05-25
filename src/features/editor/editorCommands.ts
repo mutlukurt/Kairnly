@@ -1,5 +1,4 @@
 import type { JSONContent } from '@tiptap/core'
-import { TextSelection } from '@tiptap/pm/state'
 import type { Editor } from '@tiptap/react'
 import {
   Bookmark,
@@ -82,7 +81,35 @@ const table = (): JSONContent => ({
 })
 
 const focusPos = (insertAt: number, offset = 1) => insertAt + offset
-const getInsertStart = (context: InsertContext) => (context.source === 'slash' ? context.range.from : context.insertAt)
+
+function getSlashRange(editor: Editor, context: Extract<InsertContext, { source: 'slash' }>) {
+  const { state } = editor
+  const { selection } = state
+  const blockStart = selection.$from.start()
+  const parent = selection.$from.parent
+  const parentText = parent.textBetween(0, parent.content.size, '\n', '\0')
+  const match = /(?:^|\s)\/([^\s/]*)$/.exec(parentText)
+  if (!match) {
+    const textBeforeCursor = state.doc.textBetween(blockStart, selection.from, '\n', '\0')
+    const cursorMatch = /(?:^|\s)\/([^\s/]*)$/.exec(textBeforeCursor)
+    if (!cursorMatch) return context.range
+
+    const query = cursorMatch[1] ?? ''
+    return {
+      from: selection.from - query.length - 1,
+      to: selection.from,
+    }
+  }
+
+  const query = match[1] ?? ''
+  const slashOffset = parentText.lastIndexOf(`/${query}`)
+  return {
+    from: blockStart + slashOffset,
+    to: blockStart + parentText.length,
+  }
+}
+
+const getInsertStart = (editor: Editor, context: InsertContext) => (context.source === 'slash' ? getSlashRange(editor, context).from : context.insertAt)
 
 function focusInsertedContent(editor: Editor, position: number) {
   window.requestAnimationFrame(() => {
@@ -96,57 +123,30 @@ function focusInsertedContent(editor: Editor, position: number) {
 }
 
 function insertContent(editor: Editor, context: InsertContext, content: JSONContent | JSONContent[], focusOffset: number | null = 1) {
-  const insertStart = getInsertStart(context)
+  const insertStart = getInsertStart(editor, context)
   if (context.source === 'slash') {
-    editor.chain().focus().deleteRange(context.range).insertContent(content).run()
+    editor.chain().focus().deleteRange(getSlashRange(editor, context)).insertContent(content).run()
   } else {
     editor.chain().focus().insertContentAt(context.insertAt, content).run()
   }
   if (focusOffset !== null) focusInsertedContent(editor, focusPos(insertStart, focusOffset))
 }
 
-function replaceSlashParagraphRange(editor: Editor, context: InsertContext) {
-  if (context.source !== 'slash') return context
-
-  const $from = editor.state.doc.resolve(context.range.from)
-  const parent = $from.parent
-  const parentText = parent.textBetween(0, parent.content.size, '', '')
-  if (!parent.isTextblock || !/^\/[^\s/]*$/.test(parentText) || $from.depth === 0) return context
-
-  return {
-    ...context,
-    range: {
-      from: $from.before($from.depth),
-      to: $from.after($from.depth),
-    },
-  }
-}
-
 function insertList(editor: Editor, context: InsertContext, listName: 'bulletList' | 'orderedList' | 'taskList') {
-  editor.chain().focus().command(({ state, dispatch }) => {
-    const listType = state.schema.nodes[listName]
-    const itemType = state.schema.nodes[listName === 'taskList' ? 'taskItem' : 'listItem']
-    const paragraphType = state.schema.nodes.paragraph
-    if (!listType || !itemType || !paragraphType) return false
+  if (context.source === 'slash') {
+    editor.chain().focus().deleteRange(getSlashRange(editor, context)).run()
+  } else {
+    editor.chain().focus().insertContentAt(context.insertAt, paragraph()).setTextSelection(context.insertAt + 1).run()
+  }
 
-    const attrs = listName === 'taskList' ? { checked: false } : null
-    const listNode = listType.create(null, itemType.create(attrs, paragraphType.create()))
-    const tr = state.tr
-    const normalized = replaceSlashParagraphRange(editor, context)
-    const from = normalized.source === 'slash' ? normalized.range.from : normalized.insertAt
-    const to = normalized.source === 'slash' ? normalized.range.to : normalized.insertAt
+  const chain = editor.chain().focus()
+  if (listName === 'taskList') chain.toggleTaskList().run()
+  if (listName === 'bulletList') chain.toggleBulletList().run()
+  if (listName === 'orderedList') chain.toggleOrderedList().run()
 
-    tr.replaceWith(from, to, listNode)
-    tr.setSelection(TextSelection.create(tr.doc, from + 3))
-    tr.scrollIntoView()
-    dispatch?.(tr)
-
-    window.requestAnimationFrame(() => {
-      if (!editor.isDestroyed) editor.view.focus()
-    })
-
-    return true
-  }).run()
+  window.requestAnimationFrame(() => {
+    if (!editor.isDestroyed) editor.view.focus()
+  })
 }
 
 function insertTextPrompt(editor: Editor, context: InsertContext, label: string, promptText: string) {
