@@ -673,6 +673,27 @@ User-facing:
 
 - The project is now understandable for users, developers, portfolio reviewers, and contributors.
 
+### v1.0.13 - Professional macOS DMG Packaging
+
+Technical:
+
+- Prepared the Tauri v2 macOS bundle configuration for a professional desktop release.
+- Normalized the bundle identifier to `com.mutlukurt.kairnly`.
+- Added macOS bundle category, short description, copyright, bundle name, bundle version, minimum system version, and DMG layout metadata.
+- Verified that the Kairnly `.icns` icon is used by the macOS app bundle.
+- Added `build:mac`, `build:dmg`, and `build:dmg:desktop` npm scripts.
+- Added `scripts/copy-dmg-to-desktop.mjs`, a dependency-free Node script that finds the newest generated DMG and copies it to the current user’s Desktop.
+- Added `Cargo.lock` for reproducible desktop builds.
+- Fixed Rust lifetime issues caught during the native release build.
+- Ignored Tauri generated build output so local release artifacts do not pollute normal source control.
+- Produced a signed-status-neutral local DMG build artifact at `releases/Kairnly_1.0.0_aarch64.dmg`.
+
+User-facing:
+
+- Users can download the macOS DMG directly from the repository.
+- Developers can run one command to produce a fresh DMG and copy it to Desktop.
+- The generated installer uses the Kairnly name, Kairnly icon, and proper macOS productivity app metadata.
+
 ## Installation
 
 Install dependencies:
@@ -704,6 +725,26 @@ Lint:
 ```bash
 npm run lint
 ```
+
+## Build macOS DMG
+
+Required environment: macOS with Rust/Cargo installed.
+
+Download the current bundled DMG from:
+
+```text
+releases/Kairnly_1.0.0_aarch64.dmg
+```
+
+To produce a fresh local DMG build:
+
+```bash
+npm run build:dmg:desktop
+```
+
+The generated `.dmg` is copied to the current user’s Desktop after a successful build.
+
+This local build is unsigned by default. macOS may show a security warning on first launch. For public distribution, Apple Developer ID signing and notarization are recommended.
 
 ## Desktop Build Requirements
 

@@ -8,6 +8,9 @@
     "tauri": "tauri",
     "desktop": "tauri dev",
     "build": "tsc -b && vite build",
+    "build:mac": "tauri build --bundles app",
+    "build:dmg": "tauri build --bundles dmg",
+    "build:dmg:desktop": "npm run build:dmg && node scripts/copy-dmg-to-desktop.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

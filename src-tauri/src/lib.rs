@@ -176,7 +176,8 @@ fn list_pages_inner(conn: &Connection) -> rusqlite::Result<Vec<Page>> {
         "SELECT id, title, icon, cover, parent_id, sort_order, is_favorite, is_archived, created_at, updated_at, last_opened_at
          FROM pages WHERE is_archived = 0 ORDER BY parent_id IS NOT NULL, parent_id, sort_order, updated_at DESC",
     )?;
-    stmt.query_map([], row_to_page)?.collect()
+    let pages = stmt.query_map([], row_to_page)?.collect();
+    pages
 }
 
 fn page_by_id(conn: &Connection, id: &str) -> rusqlite::Result<Option<Page>> {
@@ -422,29 +423,29 @@ fn search_workspace(query: String, state: State<'_, DbState>) -> Result<Vec<Sear
         .join(" ");
     let mut stmt = conn
         .prepare(
-            "SELECT item_id, page_id, kind, title, snippet(search_index, 4, '', '', ' … ', 12)
+            "SELECT search_index.item_id, search_index.page_id, search_index.kind, search_index.title,
+                    snippet(search_index, 4, '', '', ' … ', 12), pages.updated_at
              FROM search_index
+             JOIN pages ON pages.id = search_index.page_id
              WHERE search_index MATCH ?1
              LIMIT 24",
         )
         .map_err(|error| error.to_string())?;
-    stmt.query_map(params![fts_query], |row| {
+    let results = stmt.query_map(params![fts_query], |row| {
         let page_id: String = row.get(1)?;
-        let updated_at = conn
-            .query_row("SELECT updated_at FROM pages WHERE id = ?1", params![page_id], |r| r.get(0))
-            .unwrap_or_else(|_| now());
         Ok(SearchResult {
             id: row.get(0)?,
             page_id,
             kind: row.get(2)?,
             title: row.get(3)?,
             snippet: row.get(4)?,
-            updated_at,
+            updated_at: row.get(5)?,
         })
     })
     .map_err(|error| error.to_string())?
     .collect::<rusqlite::Result<Vec<_>>>()
-    .map_err(|error| error.to_string())
+    .map_err(|error| error.to_string());
+    results
 }
 
 #[tauri::command]
