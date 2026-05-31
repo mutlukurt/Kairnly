@@ -21,6 +21,7 @@ import { Bold, Code2, Download, GripVertical, Highlighter, Italic, Link2, Plus, 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { db } from '../../lib/db/client'
+import { exportPageHtml, exportPageMarkdown } from '../../lib/export/document'
 import { collectPageFamily, exportPagePdf, exportPagesAsPdfZip } from '../../lib/export/pdf'
 import { useWorkspaceStore } from '../../lib/store/workspace'
 import { downloadText } from '../../lib/utils/files'
@@ -364,13 +365,13 @@ export function WorkspaceEditor() {
                 </button>
                 <button
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[var(--surface-muted)]"
-                  onClick={() => downloadText(`${activePage.title || 'kairnly-page'}.html`, editor?.getHTML() ?? '', 'text/html').catch((error) => alert(error instanceof Error ? error.message : 'HTML export failed.'))}
+                  onClick={() => downloadText(`${activePage.title || 'kairnly-page'}.html`, exportPageHtml(activePage, editor?.getJSON() as TiptapDoc), 'text/html').catch((error) => alert(error instanceof Error ? error.message : 'HTML export failed.'))}
                 >
                   <Download size={13} /> HTML
                 </button>
                 <button
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[var(--surface-muted)]"
-                  onClick={() => downloadText(`${activePage.title || 'kairnly-page'}.md`, `# ${activePage.title}\n\n${plainTextFromNode(editor?.getJSON() as TiptapDoc)}`, 'text/markdown').catch((error) => alert(error instanceof Error ? error.message : 'Markdown export failed.'))}
+                  onClick={() => downloadText(`${activePage.title || 'kairnly-page'}.md`, exportPageMarkdown(activePage, editor?.getJSON() as TiptapDoc), 'text/markdown').catch((error) => alert(error instanceof Error ? error.message : 'Markdown export failed.'))}
                 >
                   <Download size={13} /> Markdown
                 </button>
