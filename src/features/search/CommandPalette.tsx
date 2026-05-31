@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { db } from '../../lib/db/client'
 import { useWorkspaceStore } from '../../lib/store/workspace'
+import { downloadBlob } from '../../lib/utils/files'
 import { formatRelativeTime } from '../../lib/utils/text'
 import type { SearchResult } from '../../types'
 
@@ -72,12 +73,7 @@ export function CommandPalette() {
           run: async () => {
             const backup = await db.exportWorkspaceBackup()
             const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const anchor = document.createElement('a')
-            anchor.href = url
-            anchor.download = `kairnly-backup-${new Date().toISOString().slice(0, 10)}.json`
-            anchor.click()
-            URL.revokeObjectURL(url)
+            await downloadBlob(blob, `kairnly-backup-${new Date().toISOString().slice(0, 10)}.json`)
           },
         },
         {

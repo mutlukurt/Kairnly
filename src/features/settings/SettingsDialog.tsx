@@ -6,6 +6,7 @@ import { db } from '../../lib/db/client'
 import { exportPagesAsPdfZip } from '../../lib/export/pdf'
 import { useWorkspaceStore } from '../../lib/store/workspace'
 import { cn } from '../../lib/utils/cn'
+import { downloadBlob } from '../../lib/utils/files'
 
 type SettingsTab = 'appearance' | 'data' | 'editor' | 'about'
 
@@ -71,12 +72,7 @@ export function SettingsDialog() {
   const exportBackup = async () => {
     const backup = await db.exportWorkspaceBackup()
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `kairnly-backup-${new Date().toISOString().slice(0, 10)}.json`
-    anchor.click()
-    URL.revokeObjectURL(url)
+    await downloadBlob(blob, `kairnly-backup-${new Date().toISOString().slice(0, 10)}.json`)
     setStatus('Backup exported.')
   }
 
@@ -159,7 +155,7 @@ export function SettingsDialog() {
               </section>
               <SettingRow title="Workspace backup" description="Export every page and stored block into a portable JSON file. Import replaces the current local workspace.">
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="soft" onClick={exportBackup} icon={<Download size={15} />}>
+                  <Button variant="soft" onClick={() => exportBackup().catch((error) => setStatus(error instanceof Error ? error.message : 'Export failed.'))} icon={<Download size={15} />}>
                     Export
                   </Button>
                   <Button variant="soft" onClick={() => fileInputRef.current?.click()} icon={<Upload size={15} />}>
@@ -168,7 +164,7 @@ export function SettingsDialog() {
                 </div>
               </SettingRow>
               <SettingRow title="All notes as PDFs" description="Download every page, including nested subpages, as separate PDF files inside one ZIP archive.">
-                <Button variant="soft" onClick={() => exportPagesAsPdfZip(pages, `kairnly-all-notes-${new Date().toISOString().slice(0, 10)}.zip`)} icon={<Download size={15} />}>
+                <Button variant="soft" onClick={() => exportPagesAsPdfZip(pages, `kairnly-all-notes-${new Date().toISOString().slice(0, 10)}.zip`).then(() => setStatus('PDF archive exported.')).catch((error) => setStatus(error instanceof Error ? error.message : 'PDF export failed.'))} icon={<Download size={15} />}>
                   Download PDFs
                 </Button>
               </SettingRow>

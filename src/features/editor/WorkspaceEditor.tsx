@@ -23,9 +23,7 @@ import { Button } from '../../components/ui/Button'
 import { db } from '../../lib/db/client'
 import { collectPageFamily, exportPagePdf, exportPagesAsPdfZip } from '../../lib/export/pdf'
 import { useWorkspaceStore } from '../../lib/store/workspace'
-import { invoke } from '@tauri-apps/api/core'
-
-const isTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+import { downloadText } from '../../lib/utils/files'
 import { plainTextFromNode } from '../../lib/utils/text'
 import type { TiptapDoc } from '../../types'
 import { BlockInsertMenu } from './BlockInsertMenu'
@@ -93,32 +91,6 @@ const KairnlyListKeys = Extension.create({
   },
 })
 
-async function downloadFile(filename: string, content: string, type: string) {
-  if (isTauri()) {
-    try {
-      const encoder = new TextEncoder()
-      const uint8Array = encoder.encode(content)
-      const savedPath = await invoke<string>('save_file_to_downloads', {
-        filename,
-        data: Array.from(uint8Array),
-      })
-      console.log('Saved to downloads:', savedPath)
-      alert(`Dosya başarıyla İndirilenler (Downloads) klasörüne kaydedildi:\n${filename}`)
-    } catch (error) {
-      console.error('Failed to save file in Tauri:', error)
-      alert(`Dosya kaydedilirken bir hata oluştu:\n${error}`)
-    }
-  } else {
-    const blob = new Blob([content], { type })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = filename
-    anchor.click()
-    URL.revokeObjectURL(url)
-  }
-}
-
 export function WorkspaceEditor() {
   const { activePage, activeDoc, pages, updatePage, saveActiveDoc, createPage, refreshPages } = useWorkspaceStore()
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({})
@@ -151,6 +123,8 @@ export function WorkspaceEditor() {
     () => [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        link: false,
+        underline: false,
       }),
       Placeholder.configure({
         placeholder: ({ node }) => (node.type.name === 'heading' ? 'Heading' : "Type '/' for commands, or just start writing…"),
@@ -390,25 +364,25 @@ export function WorkspaceEditor() {
                 </button>
                 <button
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[var(--surface-muted)]"
-                  onClick={() => downloadFile(`${activePage.title || 'kairnly-page'}.html`, editor?.getHTML() ?? '', 'text/html')}
+                  onClick={() => downloadText(`${activePage.title || 'kairnly-page'}.html`, editor?.getHTML() ?? '', 'text/html').catch((error) => alert(error instanceof Error ? error.message : 'HTML export failed.'))}
                 >
                   <Download size={13} /> HTML
                 </button>
                 <button
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[var(--surface-muted)]"
-                  onClick={() => downloadFile(`${activePage.title || 'kairnly-page'}.md`, `# ${activePage.title}\n\n${plainTextFromNode(editor?.getJSON() as TiptapDoc)}`, 'text/markdown')}
+                  onClick={() => downloadText(`${activePage.title || 'kairnly-page'}.md`, `# ${activePage.title}\n\n${plainTextFromNode(editor?.getJSON() as TiptapDoc)}`, 'text/markdown').catch((error) => alert(error instanceof Error ? error.message : 'Markdown export failed.'))}
                 >
                   <Download size={13} /> Markdown
                 </button>
                 <button
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[var(--surface-muted)]"
-                  onClick={() => exportPagePdf(activePage, editor?.getJSON() as TiptapDoc)}
+                  onClick={() => exportPagePdf(activePage, editor?.getJSON() as TiptapDoc).catch((error) => alert(error instanceof Error ? error.message : 'PDF export failed.'))}
                 >
                   <Download size={13} /> PDF
                 </button>
                 <button
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-[var(--surface-muted)]"
-                  onClick={() => exportPagesAsPdfZip(collectPageFamily(activePage.id, pages), `${activePage.title || 'kairnly-page'}-pdfs.zip`)}
+                  onClick={() => exportPagesAsPdfZip(collectPageFamily(activePage.id, pages), `${activePage.title || 'kairnly-page'}-pdfs.zip`).catch((error) => alert(error instanceof Error ? error.message : 'PDF ZIP export failed.'))}
                 >
                   <Download size={13} /> Page + subpages
                 </button>

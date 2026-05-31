@@ -1,8 +1,6 @@
 import type { Page, TiptapDoc, TiptapNode } from '../../types'
 import { db } from '../db/client'
-import { invoke } from '@tauri-apps/api/core'
-
-const isTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+import { downloadBlob, safeFileName } from '../utils/files'
 
 const pageStyle = `
   .kairnly-pdf-page {
@@ -198,9 +196,21 @@ async function htmlToPdfBlob(html: string) {
     import('jspdf')
   ])
 
-  // Bulletproof resolving for both ESM and CommonJS structures in Vite/Tauri
+  type PdfDocument = {
+    internal: { pageSize: { getWidth: () => number; getHeight: () => number } }
+    addImage: (imageData: string, format: string, x: number, y: number, width: number, height: number) => void
+    addPage: () => void
+    output: (type: 'blob') => Blob
+  }
+  type JsPdfConstructor = new (orientation: 'p', unit: 'mm', format: 'a4') => PdfDocument
+
   const html2canvas = html2canvasModule.default || html2canvasModule
-  const jsPDF = jspdfModule.jsPDF || jspdfModule.default || (jspdfModule as any)
+  const jsPdfExports = jspdfModule as { jsPDF?: JsPdfConstructor; default?: JsPdfConstructor }
+  const jsPDF = jsPdfExports.jsPDF ?? jsPdfExports.default
+
+  if (!jsPDF) {
+    throw new Error('PDF export library could not be loaded.')
+  }
 
   const host = document.createElement('div')
   host.style.position = 'fixed'
@@ -256,31 +266,6 @@ async function htmlToPdfBlob(html: string) {
   }
 }
 
-async function downloadBlob(blob: Blob, filename: string) {
-  if (isTauri()) {
-    try {
-      const arrayBuffer = await blob.arrayBuffer()
-      const uint8Array = new Uint8Array(arrayBuffer)
-      const savedPath = await invoke<string>('save_file_to_downloads', {
-        filename,
-        data: Array.from(uint8Array),
-      })
-      console.log('Saved to downloads:', savedPath)
-      alert(`Dosya başarıyla İndirilenler (Downloads) klasörüne kaydedildi:\n${filename}`)
-    } catch (error) {
-      console.error('Failed to save file in Tauri:', error)
-      alert(`Dosya kaydedilirken bir hata oluştu:\n${error}`)
-    }
-  } else {
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = filename
-    anchor.click()
-    URL.revokeObjectURL(url)
-  }
-}
-
 export function collectPageFamily(rootId: string, pages: Page[]) {
   const out: Page[] = []
   const visit = (pageId: string) => {
@@ -299,7 +284,7 @@ export function collectPageFamily(rootId: string, pages: Page[]) {
 export async function exportPagePdf(page: Page, doc?: TiptapDoc) {
   const pageDoc = doc ?? (await db.loadPageContent(page.id))
   const blob = await htmlToPdfBlob(renderPageHtml(page, pageDoc))
-  downloadBlob(blob, `${slugify(page.title)}.pdf`)
+  await downloadBlob(blob, `${slugify(page.title)}.pdf`)
 }
 
 export async function exportPagesAsPdfZip(pages: Page[], filename: string) {
@@ -311,5 +296,5 @@ export async function exportPagesAsPdfZip(pages: Page[], filename: string) {
     zip.file(`${slugify(page.title)}-${page.id.slice(0, 6)}.pdf`, blob)
   }
   const archive = await zip.generateAsync({ type: 'blob' })
-  downloadBlob(archive, filename)
+  await downloadBlob(archive, safeFileName(filename, 'kairnly-pdfs.zip'))
 }

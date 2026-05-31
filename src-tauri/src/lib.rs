@@ -3,7 +3,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
@@ -545,11 +545,16 @@ fn save_file_to_downloads(
     data: Vec<u8>,
     app: AppHandle,
 ) -> Result<String, String> {
+    let safe_filename = Path::new(&filename)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.trim().is_empty())
+        .ok_or_else(|| "Invalid file name".to_string())?;
     let download_dir = app
         .path()
         .download_dir()
         .map_err(|error| format!("Could not resolve Downloads directory: {error}"))?;
-    let target_path = download_dir.join(&filename);
+    let target_path = download_dir.join(safe_filename);
     fs::write(&target_path, data)
         .map_err(|error| format!("Failed to write file to disk: {error}"))?;
     Ok(target_path.display().to_string())
