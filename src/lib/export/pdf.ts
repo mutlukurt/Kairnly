@@ -190,7 +190,15 @@ async function waitForImages(root: HTMLElement) {
 }
 
 async function htmlToPdfBlob(html: string) {
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')])
+  const [html2canvasModule, jspdfModule] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf')
+  ])
+
+  // Bulletproof resolving for both ESM and CommonJS structures in Vite/Tauri
+  const html2canvas = html2canvasModule.default || html2canvasModule
+  const jsPDF = jspdfModule.jsPDF || jspdfModule.default || (jspdfModule as any)
+
   const host = document.createElement('div')
   host.style.position = 'fixed'
   host.style.left = '-10000px'
@@ -198,36 +206,51 @@ async function htmlToPdfBlob(html: string) {
   host.style.width = '794px'
   host.innerHTML = html
   document.body.appendChild(host)
-  await waitForImages(host)
 
-  const canvas = await html2canvas(host.querySelector('.kairnly-pdf-page') as HTMLElement, {
-    scale: 2,
-    backgroundColor: '#fffdf8',
-    useCORS: true,
-    allowTaint: true,
-  })
-  document.body.removeChild(host)
+  try {
+    await waitForImages(host)
 
-  const pdf = new jsPDF('p', 'mm', 'a4')
-  const pageWidth = pdf.internal.pageSize.getWidth()
-  const pageHeight = pdf.internal.pageSize.getHeight()
-  const imgWidth = pageWidth
-  const imgHeight = (canvas.height * imgWidth) / canvas.width
-  const imgData = canvas.toDataURL('image/jpeg', 0.95)
+    const targetEl = host.querySelector('.kairnly-pdf-page') as HTMLElement
+    if (!targetEl) {
+      throw new Error('PDF page element not found in HTML template')
+    }
 
-  let remainingHeight = imgHeight
-  let y = 0
-  pdf.addImage(imgData, 'JPEG', 0, y, imgWidth, imgHeight)
-  remainingHeight -= pageHeight
+    const canvas = await html2canvas(targetEl, {
+      scale: 2,
+      backgroundColor: '#fffdf8',
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+    })
 
-  while (remainingHeight > 0) {
-    y -= pageHeight
-    pdf.addPage()
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    const imgData = canvas.toDataURL('image/jpeg', 0.95)
+
+    let remainingHeight = imgHeight
+    let y = 0
     pdf.addImage(imgData, 'JPEG', 0, y, imgWidth, imgHeight)
     remainingHeight -= pageHeight
-  }
 
-  return pdf.output('blob')
+    while (remainingHeight > 0) {
+      y -= pageHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'JPEG', 0, y, imgWidth, imgHeight)
+      remainingHeight -= pageHeight
+    }
+
+    return pdf.output('blob')
+  } catch (error) {
+    console.error('Error generating PDF:', error)
+    throw error
+  } finally {
+    if (host.parentNode) {
+      document.body.removeChild(host)
+    }
+  }
 }
 
 function downloadBlob(blob: Blob, filename: string) {
