@@ -5,9 +5,8 @@ import { downloadBlob, safeFileName } from '../utils/files'
 const pageStyle = `
   .kairnly-pdf-page {
     width: 794px;
-    height: 1123px;
+    min-height: 1123px;
     box-sizing: border-box;
-    overflow: hidden;
     padding: 72px;
     background: #fffdf8;
     color: #1f1f1c;
@@ -69,7 +68,6 @@ const pageStyle = `
   .kairnly-pdf-page table { width: 100%; border-collapse: collapse; margin: 16px 0; }
   .kairnly-pdf-page td, .kairnly-pdf-page th { border: 1px solid #e2dace; padding: 8px; vertical-align: top; }
   .kairnly-pdf-page th { background: #f0ebe2; }
-  .kairnly-pdf-page > * { break-inside: avoid; page-break-inside: avoid; }
   .kairnly-pdf-media {
     margin: 16px 0;
     padding: 14px;
@@ -169,34 +167,6 @@ function renderPageHtml(page: Page, doc: TiptapDoc) {
   `
 }
 
-function createPdfPage() {
-  const page = document.createElement('article')
-  page.className = 'kairnly-pdf-page'
-  return page
-}
-
-function paginatePdfContent(sourcePage: HTMLElement) {
-  const pages: HTMLElement[] = []
-  let currentPage = createPdfPage()
-  pages.push(currentPage)
-
-  Array.from(sourcePage.children).forEach((child) => {
-    const clone = child.cloneNode(true) as HTMLElement
-    currentPage.appendChild(clone)
-
-    if (currentPage.scrollHeight <= currentPage.clientHeight || currentPage.children.length === 1) {
-      return
-    }
-
-    currentPage.removeChild(clone)
-    currentPage = createPdfPage()
-    currentPage.appendChild(clone)
-    pages.push(currentPage)
-  })
-
-  return pages
-}
-
 function slugify(value: string) {
   return (
     value
@@ -219,6 +189,61 @@ async function waitForImages(root: HTMLElement) {
       })
     }),
   )
+}
+
+function collectPdfCutPositions(root: HTMLElement) {
+  const rootRect = root.getBoundingClientRect()
+  const cuts = new Set<number>([0, root.scrollHeight])
+
+  root.querySelectorAll('*').forEach((element) => {
+    const rect = element.getBoundingClientRect()
+    const bottom = Math.round(rect.bottom - rootRect.top)
+    if (bottom > 0) cuts.add(bottom + 4)
+  })
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode
+    if (!textNode.textContent?.trim()) continue
+
+    const range = document.createRange()
+    range.selectNodeContents(textNode)
+    Array.from(range.getClientRects()).forEach((rect) => {
+      const bottom = Math.round(rect.bottom - rootRect.top)
+      if (bottom > 0) cuts.add(bottom + 4)
+    })
+    range.detach()
+  }
+
+  return Array.from(cuts).sort((a, b) => a - b)
+}
+
+function findPdfCut(cuts: number[], from: number, desired: number, max: number) {
+  if (desired >= max) return max
+
+  const minimumProgress = from + 120
+  let best = 0
+  for (const cut of cuts) {
+    if (cut <= from || cut > desired) continue
+    if (cut >= minimumProgress) best = cut
+  }
+
+  return best || Math.min(desired, max)
+}
+
+function makePdfPageCanvas(source: HTMLCanvasElement, sourceY: number, sourceHeight: number, pageHeight: number) {
+  const page = document.createElement('canvas')
+  page.width = source.width
+  page.height = pageHeight
+
+  const context = page.getContext('2d')
+  if (!context) throw new Error('Could not prepare PDF page canvas.')
+
+  context.fillStyle = '#fffdf8'
+  context.fillRect(0, 0, page.width, page.height)
+  context.drawImage(source, 0, sourceY, source.width, sourceHeight, 0, 0, source.width, sourceHeight)
+
+  return page
 }
 
 async function htmlToPdfBlob(html: string) {
@@ -254,35 +279,43 @@ async function htmlToPdfBlob(html: string) {
   try {
     await waitForImages(host)
 
-    const sourcePage = host.querySelector('.kairnly-pdf-page') as HTMLElement
-    if (!sourcePage) {
+    const targetEl = host.querySelector('.kairnly-pdf-page') as HTMLElement
+    if (!targetEl) {
       throw new Error('PDF page element not found in HTML template')
     }
+
+    const canvas = await html2canvas(targetEl, {
+      scale: 2,
+      width: 794,
+      height: targetEl.scrollHeight,
+      windowWidth: 794,
+      windowHeight: targetEl.scrollHeight,
+      backgroundColor: '#fffdf8',
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+    })
 
     const pdf = new jsPDF('p', 'mm', 'a4')
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
+    const pageHeightCss = 1123
+    const scale = canvas.width / targetEl.offsetWidth
+    const cuts = collectPdfCutPositions(targetEl)
 
-    const pages = paginatePdfContent(sourcePage)
-    sourcePage.remove()
-    pages.forEach((page) => host.appendChild(page))
-    await waitForImages(host)
+    let y = 0
+    let pageIndex = 0
+    while (y < targetEl.scrollHeight) {
+      const nextY = findPdfCut(cuts, y, y + pageHeightCss, targetEl.scrollHeight)
+      const sourceY = Math.round(y * scale)
+      const sourceHeight = Math.max(1, Math.round((nextY - y) * scale))
+      const pageCanvas = makePdfPageCanvas(canvas, sourceY, sourceHeight, Math.round(pageHeightCss * scale))
 
-    for (const [index, page] of pages.entries()) {
-      const canvas = await html2canvas(page, {
-        scale: 2,
-        width: 794,
-        height: 1123,
-        windowWidth: 794,
-        windowHeight: 1123,
-        backgroundColor: '#fffdf8',
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-      })
+      if (pageIndex > 0) pdf.addPage()
+      pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, pageHeight)
 
-      if (index > 0) pdf.addPage()
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, pageHeight)
+      y = nextY
+      pageIndex += 1
     }
 
     return pdf.output('blob')
