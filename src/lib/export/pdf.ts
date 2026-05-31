@@ -231,7 +231,7 @@ function findPdfCut(cuts: number[], from: number, desired: number, max: number) 
   return best || Math.min(desired, max)
 }
 
-function makePdfPageCanvas(source: HTMLCanvasElement, sourceY: number, sourceHeight: number, pageHeight: number) {
+function makePdfPageCanvas(source: HTMLCanvasElement, sourceY: number, sourceHeight: number, pageHeight: number, destinationY: number) {
   const page = document.createElement('canvas')
   page.width = source.width
   page.height = pageHeight
@@ -241,7 +241,7 @@ function makePdfPageCanvas(source: HTMLCanvasElement, sourceY: number, sourceHei
 
   context.fillStyle = '#fffdf8'
   context.fillRect(0, 0, page.width, page.height)
-  context.drawImage(source, 0, sourceY, source.width, sourceHeight, 0, 0, source.width, sourceHeight)
+  context.drawImage(source, 0, sourceY, source.width, sourceHeight, 0, destinationY, source.width, sourceHeight)
 
   return page
 }
@@ -300,16 +300,20 @@ async function htmlToPdfBlob(html: string) {
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
     const pageHeightCss = 1123
+    const pageMarginCss = 72
+    const contentHeightCss = pageHeightCss - pageMarginCss * 2
     const scale = canvas.width / targetEl.offsetWidth
     const cuts = collectPdfCutPositions(targetEl)
 
     let y = 0
     let pageIndex = 0
     while (y < targetEl.scrollHeight) {
-      const nextY = findPdfCut(cuts, y, y + pageHeightCss, targetEl.scrollHeight)
+      const desiredY = pageIndex === 0 ? y + pageHeightCss - pageMarginCss : y + contentHeightCss
+      const nextY = findPdfCut(cuts, y, desiredY, targetEl.scrollHeight)
       const sourceY = Math.round(y * scale)
       const sourceHeight = Math.max(1, Math.round((nextY - y) * scale))
-      const pageCanvas = makePdfPageCanvas(canvas, sourceY, sourceHeight, Math.round(pageHeightCss * scale))
+      const destinationY = pageIndex === 0 ? 0 : Math.round(pageMarginCss * scale)
+      const pageCanvas = makePdfPageCanvas(canvas, sourceY, sourceHeight, Math.round(pageHeightCss * scale), destinationY)
 
       if (pageIndex > 0) pdf.addPage()
       pdf.addImage(pageCanvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageWidth, pageHeight)
