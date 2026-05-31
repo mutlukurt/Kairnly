@@ -23,6 +23,9 @@ import { Button } from '../../components/ui/Button'
 import { db } from '../../lib/db/client'
 import { collectPageFamily, exportPagePdf, exportPagesAsPdfZip } from '../../lib/export/pdf'
 import { useWorkspaceStore } from '../../lib/store/workspace'
+import { invoke } from '@tauri-apps/api/core'
+
+const isTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 import { plainTextFromNode } from '../../lib/utils/text'
 import type { TiptapDoc } from '../../types'
 import { BlockInsertMenu } from './BlockInsertMenu'
@@ -90,14 +93,30 @@ const KairnlyListKeys = Extension.create({
   },
 })
 
-function downloadFile(filename: string, content: string, type: string) {
-  const blob = new Blob([content], { type })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
+async function downloadFile(filename: string, content: string, type: string) {
+  if (isTauri()) {
+    try {
+      const encoder = new TextEncoder()
+      const uint8Array = encoder.encode(content)
+      const savedPath = await invoke<string>('save_file_to_downloads', {
+        filename,
+        data: Array.from(uint8Array),
+      })
+      console.log('Saved to downloads:', savedPath)
+      alert(`Dosya başarıyla İndirilenler (Downloads) klasörüne kaydedildi:\n${filename}`)
+    } catch (error) {
+      console.error('Failed to save file in Tauri:', error)
+      alert(`Dosya kaydedilirken bir hata oluştu:\n${error}`)
+    }
+  } else {
+    const blob = new Blob([content], { type })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
 }
 
 export function WorkspaceEditor() {

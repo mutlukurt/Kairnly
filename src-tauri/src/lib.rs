@@ -539,6 +539,22 @@ fn import_workspace_backup(backup: Value, state: State<'_, DbState>) -> Result<(
     rebuild_search_index(&conn).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn save_file_to_downloads(
+    filename: String,
+    data: Vec<u8>,
+    app: AppHandle,
+) -> Result<String, String> {
+    let download_dir = app
+        .path()
+        .download_dir()
+        .map_err(|error| format!("Could not resolve Downloads directory: {error}"))?;
+    let target_path = download_dir.join(&filename);
+    fs::write(&target_path, data)
+        .map_err(|error| format!("Failed to write file to disk: {error}"))?;
+    Ok(target_path.display().to_string())
+}
+
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
@@ -560,7 +576,8 @@ pub fn run() {
             save_page_content,
             search_workspace,
             export_workspace_backup,
-            import_workspace_backup
+            import_workspace_backup,
+            save_file_to_downloads
         ])
         .run(tauri::generate_context!())
         .expect("error while running Kairnly");

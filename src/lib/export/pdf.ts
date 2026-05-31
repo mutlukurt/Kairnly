@@ -1,5 +1,8 @@
 import type { Page, TiptapDoc, TiptapNode } from '../../types'
 import { db } from '../db/client'
+import { invoke } from '@tauri-apps/api/core'
+
+const isTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 const pageStyle = `
   .kairnly-pdf-page {
@@ -253,13 +256,29 @@ async function htmlToPdfBlob(html: string) {
   }
 }
 
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
+async function downloadBlob(blob: Blob, filename: string) {
+  if (isTauri()) {
+    try {
+      const arrayBuffer = await blob.arrayBuffer()
+      const uint8Array = new Uint8Array(arrayBuffer)
+      const savedPath = await invoke<string>('save_file_to_downloads', {
+        filename,
+        data: Array.from(uint8Array),
+      })
+      console.log('Saved to downloads:', savedPath)
+      alert(`Dosya başarıyla İndirilenler (Downloads) klasörüne kaydedildi:\n${filename}`)
+    } catch (error) {
+      console.error('Failed to save file in Tauri:', error)
+      alert(`Dosya kaydedilirken bir hata oluştu:\n${error}`)
+    }
+  } else {
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
 }
 
 export function collectPageFamily(rootId: string, pages: Page[]) {
