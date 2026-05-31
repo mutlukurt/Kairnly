@@ -17,12 +17,14 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { motion } from 'framer-motion'
-import { Bold, Code2, Download, GripVertical, Highlighter, Italic, Link2, Plus, Strikethrough, Trash2, Underline as UnderlineIcon } from 'lucide-react'
+import { Bold, Check, Code2, Download, GripVertical, Highlighter, Italic, Link2, Plus, Search, Strikethrough, Trash2, Underline as UnderlineIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { db } from '../../lib/db/client'
 import { exportPageHtml, exportPageMarkdown } from '../../lib/export/document'
 import { collectPageFamily, exportPagePdf, exportPagesAsPdfZip } from '../../lib/export/pdf'
+import { PageIcon } from '../../lib/icons/pageIcons'
+import { pageIconOptions } from '../../lib/icons/pageIconRegistry'
 import { useWorkspaceStore } from '../../lib/store/workspace'
 import { downloadText } from '../../lib/utils/files'
 import { plainTextFromNode } from '../../lib/utils/text'
@@ -31,7 +33,6 @@ import { BlockInsertMenu } from './BlockInsertMenu'
 import { MediaBlock } from './MediaBlock'
 import type { InsertContext } from './editorCommands'
 
-const emojiChoices = ['🪨', '✦', '✎', '◒', '◆', '☘', '◎', '□']
 const textColors = [
   ['Default', ''],
   ['Gray', '#6F6A60'],
@@ -109,11 +110,14 @@ export function WorkspaceEditor() {
     deleteTo: number
     targetBlockId?: string
   }>({ visible: false, position: { left: 0, top: 0 }, insertAt: 0, deleteFrom: 0, deleteTo: 0 })
+  const [iconPickerOpen, setIconPickerOpen] = useState(false)
+  const [iconQuery, setIconQuery] = useState('')
   const pendingFilePicker = useRef<{
     kind: 'image' | 'video' | 'file'
     resolve: (content: JSONContent | null) => void
   } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const iconPickerRef = useRef<HTMLDivElement | null>(null)
   const saveTimer = useRef<number | null>(null)
   const titleTimer = useRef<number | null>(null)
   const blockControlsHideTimer = useRef<number | null>(null)
@@ -181,6 +185,23 @@ export function WorkspaceEditor() {
       }
     },
   })
+
+  const filteredIconOptions = useMemo(() => {
+    const query = iconQuery.trim().toLowerCase()
+    if (!query) return pageIconOptions
+    return pageIconOptions.filter((option) => option.label.toLowerCase().includes(query) || option.name.toLowerCase().includes(query))
+  }, [iconQuery])
+
+  useEffect(() => {
+    if (!iconPickerOpen) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!iconPickerRef.current?.contains(event.target as Node)) setIconPickerOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [iconPickerOpen])
 
   useEffect(() => {
     if (!editor || !activeDoc || !activePage?.id) return
@@ -335,16 +356,62 @@ export function WorkspaceEditor() {
       <DndContext sensors={sensors}>
         <div className="mx-auto max-w-[var(--editor-max-width)] px-8 pb-28 pt-12">
           <div className="mb-6 flex items-start gap-4">
-            <button
-              className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[var(--surface-muted)] text-3xl transition hover:bg-[var(--accent-soft)]"
-              onClick={() => {
-                const current = emojiChoices.indexOf(activePage.icon ?? '□')
-                updatePage({ ...activePage, icon: emojiChoices[(current + 1) % emojiChoices.length] })
-              }}
-              aria-label="Change page icon"
-            >
-              {activePage.icon ?? '□'}
-            </button>
+            <div ref={iconPickerRef} className="relative shrink-0">
+              <button
+                className="grid h-14 w-14 place-items-center rounded-2xl bg-[var(--surface-muted)] text-[var(--text)] transition hover:bg-[var(--accent-soft)]"
+                onClick={() => setIconPickerOpen((open) => !open)}
+                aria-expanded={iconPickerOpen}
+                aria-label="Change page icon"
+              >
+                <PageIcon value={activePage.icon} size={30} />
+              </button>
+              {iconPickerOpen ? (
+                <div className="absolute left-0 top-16 z-40 w-[336px] overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-lift">
+                  <div className="border-b border-[var(--border)] p-2">
+                    <label className="flex h-9 items-center gap-2 rounded-lg bg-[var(--surface-muted)] px-2 text-sm text-[var(--text-muted)]">
+                      <Search size={15} />
+                      <input
+                        value={iconQuery}
+                        onChange={(event) => setIconQuery(event.target.value)}
+                        className="min-w-0 flex-1 bg-transparent text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]"
+                        placeholder="Search lucide icons"
+                        autoFocus
+                      />
+                    </label>
+                  </div>
+                  <div className="max-h-[360px] overflow-y-auto p-2">
+                    {filteredIconOptions.length > 0 ? (
+                      <div className="grid grid-cols-6 gap-1">
+                        {filteredIconOptions.map((option) => {
+                          const selected = activePage.icon === option.value
+                          return (
+                            <button
+                              key={option.name}
+                              className={`group relative grid h-10 place-items-center rounded-lg transition ${selected ? 'bg-[var(--accent-soft)] text-[var(--text)]' : 'text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text)]'}`}
+                              onClick={() => {
+                                updatePage({ ...activePage, icon: option.value })
+                                setIconPickerOpen(false)
+                                setIconQuery('')
+                              }}
+                              title={option.label}
+                              aria-label={`Use ${option.label} icon`}
+                            >
+                              <option.Icon size={19} strokeWidth={1.9} />
+                              {selected ? <Check size={11} className="absolute right-1 top-1" /> : null}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="px-3 py-8 text-center text-sm text-[var(--text-faint)]">No icons found.</div>
+                    )}
+                  </div>
+                  <div className="border-t border-[var(--border)] px-3 py-2 text-[11px] text-[var(--text-faint)]">
+                    {filteredIconOptions.length} local lucide icons
+                  </div>
+                </div>
+              ) : null}
+            </div>
             <div className="min-w-0 flex-1">
               <input
                 value={title}

@@ -1,5 +1,6 @@
 import type { Page, TiptapDoc, TiptapNode } from '../../types'
 import { db } from '../db/client'
+import { getPageIconText } from '../icons/pageIconText'
 import { downloadBlob, safeFileName } from '../utils/files'
 
 const pageStyle = `
@@ -160,7 +161,7 @@ function renderPageHtml(page: Page, doc: TiptapDoc) {
   return `
     <style>${pageStyle}</style>
     <article class="kairnly-pdf-page">
-      <div class="kairnly-pdf-meta">${escapeHtml(page.icon ?? '□')} Kairnly · ${new Date(page.updatedAt).toLocaleString()}</div>
+      <div class="kairnly-pdf-meta">${escapeHtml(getPageIconText(page.icon))} · Kairnly · ${new Date(page.updatedAt).toLocaleString()}</div>
       <h1 class="kairnly-pdf-title">${escapeHtml(page.title || 'Untitled')}</h1>
       ${body}
     </article>

@@ -14,6 +14,7 @@ import {
 import { useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Tooltip } from '../../components/ui/Tooltip'
+import { PageIcon } from '../../lib/icons/pageIcons'
 import { useWorkspaceStore } from '../../lib/store/workspace'
 import { cn } from '../../lib/utils/cn'
 import { formatRelativeTime } from '../../lib/utils/text'
@@ -39,7 +40,7 @@ function PageRow({ node, depth = 0 }: { node: PageNode; depth?: number }) {
           {hasChildren ? open ? <ChevronsLeft size={12} className="-rotate-90" /> : <ChevronsRight size={12} /> : <span className="h-1 w-1 rounded-full bg-current opacity-40" />}
         </button>
         <button className="flex min-w-0 flex-1 items-center gap-2 text-left" onClick={() => openPage(node.id)}>
-          <span className="shrink-0 text-base">{node.icon ?? '□'}</span>
+          <PageIcon value={node.icon} size={16} className="shrink-0" />
           <span className="truncate">{node.title || 'Untitled'}</span>
         </button>
         <div className="flex opacity-0 transition group-hover:opacity-100">
@@ -68,7 +69,7 @@ function MiniPage({ page }: { page: Page }) {
   const openPage = useWorkspaceStore((state) => state.openPage)
   return (
     <button onClick={() => openPage(page.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--text)]">
-      <span>{page.icon ?? '□'}</span>
+      <PageIcon value={page.icon} size={15} className="shrink-0" />
       <span className="min-w-0 flex-1 truncate">{page.title || 'Untitled'}</span>
       <span className="text-[11px] text-[var(--text-faint)]">{formatRelativeTime(page.lastOpenedAt ?? page.updatedAt)}</span>
     </button>

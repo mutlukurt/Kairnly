@@ -1,4 +1,5 @@
 import type { Page, TiptapDoc, TiptapNode } from '../../types'
+import { getPageIconText } from '../icons/pageIconText'
 
 function escapeHtml(value: string) {
   return value
@@ -237,7 +238,7 @@ export function exportPageHtml(page: Page, doc: TiptapDoc) {
 </head>
 <body>
   <article>
-    <div class="meta">${escapeHtml(page.icon ?? '□')} Kairnly · ${new Date(page.updatedAt).toLocaleString()}</div>
+    <div class="meta">${escapeHtml(getPageIconText(page.icon))} · Kairnly · ${new Date(page.updatedAt).toLocaleString()}</div>
     <h1 class="title">${escapeHtml(page.title || 'Untitled')}</h1>
     ${body}
   </article>
