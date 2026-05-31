@@ -223,7 +223,7 @@ The UI does not expose the technical word “blocks” to the user. The user sim
 
 - Create pages
 - Rename pages inline
-- Add page icons
+- Add searchable Lucide page icons
 - Add/remove cover area
 - Favorite pages
 - Archive pages
@@ -252,7 +252,7 @@ The UI does not expose the technical word “blocks” to the user. The user sim
 
 - Tiptap / ProseMirror editor
 - Page title field
-- Page icon selector
+- Searchable local Lucide page icon selector
 - Placeholder writing text
 - Autosave
 - Saved locally indicator
@@ -414,7 +414,11 @@ Kairnly supports:
 - Export entire workspace as JSON
 - Import workspace JSON backup
 
-PDF export includes rendered text, headings, lists, todos, tables, code blocks, callouts, images, and media cards. Videos are represented as attachment cards because standard PDFs do not preserve playable video in a simple portable way.
+Markdown export preserves headings, paragraphs, lists, todos, quotes, code blocks, dividers, tables, links, images, media references, and common inline marks instead of flattening the page into one plain-text paragraph.
+
+HTML export produces a standalone readable HTML document with page title, metadata, typography, tables, task lists, media cards, and inline formatting.
+
+PDF export includes rendered text, headings, lists, todos, tables, code blocks, callouts, images, and media cards. PDF pages use consistent top and bottom margins so content does not sit against the page edge. Videos are represented as attachment cards because standard PDFs do not preserve playable video in a simple portable way.
 
 ### Theme System
 
@@ -478,7 +482,12 @@ Kairnly/
         client.ts
         localFallback.ts
       export/
+        document.ts
         pdf.ts
+      icons/
+        pageIconRegistry.ts
+        pageIconText.ts
+        pageIcons.tsx
       store/
         workspace.ts
       utils/
@@ -786,6 +795,67 @@ User-facing:
 - Pressing Enter once creates the next checkbox.
 - Pressing Enter again on an empty checkbox returns to normal paragraph writing.
 - Bulleted list markers are visible in both light and dark themes.
+
+### v1.0.19 - Reliable Desktop and Web Export Downloads
+
+Technical:
+
+- Fixed export download behavior so desktop and browser builds use a shared download path.
+- Made PDF, Markdown, HTML, JSON backup, and ZIP export flows consistently trigger downloads in the Tauri DMG build and the web preview.
+- Refreshed the macOS DMG artifact and the website download artifact after the export fix.
+
+User-facing:
+
+- Export buttons now download files reliably from both the web build and the installed macOS app.
+- Import/export workflows remain available without cloud sync or accounts.
+
+### v1.0.20 - PDF Pagination and Page Margins
+
+Technical:
+
+- Reworked PDF export slicing so long pages are captured fully instead of exporting only the first visible section.
+- Improved page break detection around text lines, headings, paragraphs, lists, code blocks, tables, and media blocks.
+- Added consistent top and bottom margins to every generated PDF page.
+- Refreshed the macOS DMG and downloadable site artifact with the PDF fixes.
+
+User-facing:
+
+- PDF exports no longer cut text at awkward positions.
+- Multi-page PDFs include the full note content.
+- Every PDF page has stable readable spacing at the top and bottom.
+
+### v1.0.21 - Structured Markdown and HTML Export
+
+Technical:
+
+- Added `src/lib/export/document.ts` for Tiptap JSON to Markdown and standalone HTML rendering.
+- Replaced plain-text Markdown export with structured Markdown generation.
+- Replaced raw editor HTML export with a complete portable HTML document.
+- Preserved headings, lists, todos, quotes, code blocks, dividers, tables, links, images, media cards, and inline formatting where supported.
+- Updated PDF/HTML metadata so Lucide page icons are exported as readable labels instead of raw internal values.
+
+User-facing:
+
+- Markdown exports now look like real Markdown documents.
+- HTML exports open as polished standalone documents instead of partial editor fragments.
+- Exported documents better match the structure users wrote in the editor.
+
+### v1.0.22 - Full Local Lucide Page Icon Picker
+
+Technical:
+
+- Added a shared page icon renderer for editor and sidebar usage.
+- Added a local Lucide icon registry that exposes the installed `lucide-react` icon set inside the app.
+- Added a searchable icon picker to the page header.
+- Stored selected Lucide icons as `lucide:IconName` while keeping old emoji/symbol icons backward-compatible.
+- Updated sidebar rendering and document export metadata to understand both legacy icons and Lucide icons.
+- Rebuilt and refreshed the macOS DMG and public download artifact.
+
+User-facing:
+
+- Page icons are no longer limited to a small hard-coded symbol list.
+- Users can search and select from the local Lucide icon set directly inside Kairnly.
+- Selected icons appear consistently in the editor and sidebar.
 
 ## Installation
 
